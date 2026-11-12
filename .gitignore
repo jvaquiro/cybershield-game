@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-offline
+*.tsbuildinfo
+.vite
+coverage
+*.log
+.DS_Store
+.claude/settings.local.json
