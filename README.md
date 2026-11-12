@@ -2,7 +2,7 @@
 
 Interactive prototype for the CyberShield project (Taller de Proyectos Interdisciplinarios, Universidad Nacional de Colombia): a browser game and risk simulation of OT cybersecurity in a reference electrical substation.
 
-**Live demo:** _pending first deployment_
+**Live demo:** https://jvaquiro.github.io/cybershield-game/
 
 ## Requirements
 
