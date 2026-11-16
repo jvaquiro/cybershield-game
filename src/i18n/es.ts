@@ -1,6 +1,9 @@
 // All Spanish UI strings live here.
 const pct = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
 const formatPercent = (value: number) => `${pct.format(value)} %`;
+/** "Correo de phishing" → "correo de phishing"; acronyms such as "USB o ..." stay as they are. */
+const lowerFirst = (text: string) =>
+  /^\p{Lu}\p{Ll}/u.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
 
 export const es = {
   appTitle: 'CyberShield',
@@ -61,6 +64,7 @@ export const es = {
     reduction: (value: number, percent: number) =>
       `Reducción: ${value} (${formatPercent(percent)})`,
     cityOn: (percent: number) => `Ciudad encendida: ${formatPercent(percent)}`,
+    cityScenario: (entry: string) => `Si el atacante entra por ${lowerFirst(entry)}`,
     cityAria: (percent: number) => `${formatPercent(percent)} de la ciudad sigue con luz`,
     recommendation: 'Recomendación de CyberShield',
     yourChoice: 'Tu defensa',

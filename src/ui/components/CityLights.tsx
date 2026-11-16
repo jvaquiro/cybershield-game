@@ -4,6 +4,8 @@ import { colors } from '../theme';
 interface CityLightsProps {
   /** Percentage of the city that keeps power (0–100). */
   onPercent: number;
+  /** Tailwind height class for the skyline. */
+  heightClass?: string;
 }
 
 // Fixed skyline: [height, window columns] per building. Purely decorative.
@@ -24,13 +26,13 @@ const GAP = 8;
 const HEIGHT = 124;
 
 /** Row of buildings; the share of lit buildings follows onPercent. */
-export function CityLights({ onPercent }: CityLightsProps) {
+export function CityLights({ onPercent, heightClass = 'h-24' }: CityLightsProps) {
   const lit = Math.round((onPercent / 100) * BUILDINGS.length);
   return (
     <figure className="flex flex-col gap-1">
       <svg
         viewBox={`0 0 ${BUILDINGS.length * (WIDTH + GAP)} ${HEIGHT}`}
-        className="h-24 w-full"
+        className={`${heightClass} w-full`}
         role="img"
         aria-label={es.result.cityAria(onPercent)}
       >

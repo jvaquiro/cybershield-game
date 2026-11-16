@@ -1,11 +1,5 @@
-import type { Asset, Control, PurdueLevel, Route, SubstationData } from '../data/schema';
-import {
-  outcomeFor,
-  selectControls,
-  simulate,
-  simulateRoute,
-  type RouteResult,
-} from './simulation';
+import type { Asset, Control, Route, SubstationData } from '../data/schema';
+import { outcomeFor, selectControls, simulate, simulateRoute } from './simulation';
 
 export interface RiskReduction {
   before: number;
@@ -56,21 +50,22 @@ export function riskReduction(
   return { before, after, reduction, percent: before === 0 ? 0 : (reduction / before) * 100 };
 }
 
-/** Deepest level reached by any route (null if no route reaches an asset). */
-export function deepestLevelOverall(results: readonly RouteResult[]): PurdueLevel | null {
-  let deepest: PurdueLevel | null = null;
-  for (const { deepestLevel } of results) {
-    if (deepestLevel !== null && (deepest === null || deepestLevel < deepest)) {
-      deepest = deepestLevel;
-    }
-  }
-  return deepest;
+export interface RouteCityOff {
+  routeId: string;
+  /** outcomes value for the deepest level this route reaches; 0 if it reaches no asset. */
+  cityOffPercent: number;
 }
 
-/** Stage 1: outcome for the deepest level reached by any route. */
+/**
+ * Stage 1: one scenario per route ("if the attacker enters this way"), in data.routes order.
+ * Stage 2 uses duel(), which gives the same value for the single chosen route.
+ */
 export function cityOffPercent(
   data: SubstationData,
   selectedControlIds: readonly string[],
-): number {
-  return outcomeFor(data, deepestLevelOverall(simulate(data, selectedControlIds)));
+): RouteCityOff[] {
+  return simulate(data, selectedControlIds).map((result) => ({
+    routeId: result.routeId,
+    cityOffPercent: outcomeFor(data, result.deepestLevel),
+  }));
 }

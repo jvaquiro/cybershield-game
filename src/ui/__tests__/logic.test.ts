@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { makeData, placeholder as data } from '../../engine/__tests__/fixtures';
+import { es } from '../../i18n/es';
 import { compareChoice } from '../logic/compareChoice';
 import { computeMapLayout, wrapText } from '../logic/mapLayout';
 import { toggleSelection } from '../logic/selection';
@@ -127,5 +128,16 @@ describe('compareChoice', () => {
       { alpha: [{ routeId: 'a', stepIndex: 0 }], beta: [{ routeId: 'a', stepIndex: 0 }] },
     );
     expect(compareChoice(tie, ['beta']).verdict).toBe('equivalent');
+  });
+});
+
+describe('es.result.cityScenario', () => {
+  it('lowercases a normal first word but keeps acronyms', () => {
+    expect(es.result.cityScenario('Correo de phishing')).toBe(
+      'Si el atacante entra por correo de phishing',
+    );
+    expect(es.result.cityScenario('USB o actualización de software')).toBe(
+      'Si el atacante entra por USB o actualización de software',
+    );
   });
 });

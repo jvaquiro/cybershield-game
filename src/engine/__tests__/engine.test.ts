@@ -37,7 +37,10 @@ describe('no controls', () => {
     expect(routeRisk(route('remote'), [], data.assets)).toBe(36);
     expect(routeRisk(route('local'), [], data.assets)).toBe(27);
     expect(totalRisk(data, [])).toBe(63);
-    expect(cityOffPercent(data, [])).toBe(100);
+    expect(cityOffPercent(data, [])).toEqual([
+      { routeId: 'remote', cityOffPercent: 100 },
+      { routeId: 'local', cityOffPercent: 100 },
+    ]);
     expect(riskReduction(data, [])).toEqual({ before: 63, after: 63, reduction: 0, percent: 0 });
   });
 });
@@ -79,6 +82,23 @@ describe('route blocked late', () => {
   });
 });
 
+describe('cityOffPercent per route', () => {
+  it('a late block keeps the attack at level 1 (30 %) while the other route is untouched', () => {
+    expect(cityOffPercent(data, ['dual-auth'])).toEqual([
+      { routeId: 'remote', cityOffPercent: 30 },
+      { routeId: 'local', cityOffPercent: 100 },
+    ]);
+  });
+
+  it('matches duel for the same control and route', () => {
+    for (const c of data.controls) {
+      cityOffPercent(data, [c.id]).forEach(({ routeId, cityOffPercent: off }) => {
+        expect(duel(data, c.id, routeId).cityOffPercent).toBe(off);
+      });
+    }
+  });
+});
+
 describe('control that does not touch the chosen route', () => {
   it('leaves the route unblocked', () => {
     expect(duel(data, 'firmware-check', 'remote')).toMatchObject({
@@ -96,7 +116,11 @@ describe('totalRisk, riskReduction and cityOffPercent with controls', () => {
     // segmentation: remote reaches corporate (9); local still reaches hmi, ied, breakers (27).
     expect(routeRisk(route('remote'), [control('segmentation')], data.assets)).toBe(9);
     expect(totalRisk(data, ['segmentation'])).toBe(36);
-    expect(cityOffPercent(data, ['segmentation'])).toBe(100);
+    // Per route: remote stops at level 4 (0 % off), local reaches the breakers (100 %).
+    expect(cityOffPercent(data, ['segmentation'])).toEqual([
+      { routeId: 'remote', cityOffPercent: 0 },
+      { routeId: 'local', cityOffPercent: 100 },
+    ]);
     const reduction = riskReduction(data, ['segmentation']);
     expect(reduction).toMatchObject({ before: 63, after: 36, reduction: 27 });
     expect(reduction.percent).toBeCloseTo((27 / 63) * 100);
@@ -112,7 +136,10 @@ describe('totalRisk, riskReduction and cityOffPercent with controls', () => {
   it('all routes blocked', () => {
     // remote reaches corporate only (level 4), local nothing.
     expect(totalRisk(data, ['segmentation', 'usb-policy'])).toBe(9);
-    expect(cityOffPercent(data, ['segmentation', 'usb-policy'])).toBe(0);
+    expect(cityOffPercent(data, ['segmentation', 'usb-policy'])).toEqual([
+      { routeId: 'remote', cityOffPercent: 0 },
+      { routeId: 'local', cityOffPercent: 0 },
+    ]);
     expect(riskReduction(data, ['segmentation', 'usb-policy']).percent).toBeCloseTo(
       (54 / 63) * 100,
     );

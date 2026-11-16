@@ -16,16 +16,17 @@ The technical data (assets, attack routes, controls, probability and impact valu
 
 - Load the substation data from a JSON file and validate it.
 - Show the substation map by Purdue level (0 to 4).
-- Let the user select exactly 3 controls out of the available ones.
+- Let the user select exactly `defenderBudget` controls (currently **1**).
 - Run the simulation: for each attack route, show how far it gets and which control stops it.
 - Show total risk before and after the selected controls.
-- Show the best combination of 3 controls (CyberShield's recommendation) and compare it with the user's choice.
+- Show the best choice of controls (CyberShield's recommendation) and compare it with the user's choice.
 
 ### Stage 2 — 1 vs 1 game layer (deadline: Dec 5, 2026)
 
 - Two players on one device: defender and attacker.
 - Secret turns with a "pass the device" screen ("Atacante, voltéate").
-- The attacker picks an entry point and a route.
+- The defender secretly picks 1 control; then the attacker secretly picks 1 route (like a penalty kick).
+- If the chosen control blocks a step of the chosen route, the attack stops there; otherwise it reaches the process level.
 - Animated attack moving down the levels; city lights turning off according to the deepest level reached.
 - Final screen with the risk calculation and CyberShield's recommendation.
 - Kiosk mode: return to the start screen after 30 s of inactivity.
@@ -117,16 +118,19 @@ interface Asset {
 }
 
 interface Route {
-  id: string;            // e.g. "phishing"
-  name: string;          // e.g. "Correo de phishing"
-  steps: string[];       // ordered asset ids, from entry point down to the process level
+  id: string;            // e.g. "remote"
+  name: string;          // e.g. "Acceso remoto (phishing)"
+  entry: string;         // how the attacker gets in, e.g. "Correo de phishing"
+  steps: string[];       // ordered asset ids the attacker reaches, down to the process level
 }
 
 interface Control {
   id: string;            // e.g. "segmentation"
   name: string;
   description: string;
-  blocks: { routeId: string; stepIndex: number }[]; // steps this control stops
+  // stepIndex = the attacker is stopped BEFORE reaching route.steps[stepIndex].
+  // stepIndex 0 means the attacker is stopped at the entry point and reaches no asset.
+  blocks: { routeId: string; stepIndex: number }[];
 }
 
 interface Outcome {
@@ -140,7 +144,7 @@ interface SubstationData {
   routes: Route[];
   controls: Control[];
   outcomes: Outcome[];
-  defenderBudget: number; // number of controls the defender can pick (default 3)
+  defenderBudget: number; // number of controls the defender can pick (currently 1)
 }
 ```
 
@@ -152,10 +156,39 @@ Validation rules (enforced in the schema, with clear error messages):
 
 Placeholder content: create `subestacion.json` from this draft and add `"_status": "PLACEHOLDER - pending validation by electrical team"` at the top level. Show a visible "Datos de prueba" badge in the UI while that field is present.
 
-- Assets: corporate network (L4), SCADA server (L3), contractor VPN (L3), gateway (L2), local HMI (L2), maintenance laptop (L2), 115 kV IEDs (L1), legacy RTU (L1), merging units (L0), breakers and transformers (L0).
-- Routes: phishing (corporate → SCADA → gateway → IED → breakers), contractor VPN (VPN → HMI → IED → breakers), maintenance USB (laptop → HMI → merging units → breakers), supply chain (IED firmware → breakers).
-- Controls: zone segmentation, two-person authorization for commands, USB policy, contractor access control, legacy isolation, firmware verification.
-- Use probability and impact values of 3 everywhere until real values arrive.
+The game structure below was **agreed with the electrical team** (a deliberately simple version, focused on the human factor). Only the probability, impact and outcome values are still placeholders.
+
+Assets (5):
+
+| id | Spanish name | Level |
+|---|---|---|
+| `corporate` | Red corporativa | 4 |
+| `scada` | Servidor SCADA | 3 |
+| `hmi` | HMI local | 2 |
+| `ied` | IED de 115 kV | 1 |
+| `breakers` | Interruptores | 0 |
+
+Routes (2):
+
+| id | Spanish name | Entry | Steps |
+|---|---|---|---|
+| `remote` | Acceso remoto | Correo de phishing | `corporate` → `scada` → `ied` → `breakers` |
+| `local` | Acceso local | USB o actualización de software | `hmi` → `ied` → `breakers` |
+
+Controls (4):
+
+| id | Spanish name | Blocks |
+|---|---|---|
+| `segmentation` | Segmentación por zonas | `remote`, stepIndex 1 (before SCADA) |
+| `dual-auth` | Doble autorización de mandos | `remote`, stepIndex 3 (before breakers) |
+| `usb-policy` | Política de USB | `local`, stepIndex 0 (before HMI) |
+| `firmware-check` | Verificación de firmware | `local`, stepIndex 1 (before IED) |
+
+- `defenderBudget`: 1.
+- Probability and impact: 3 for every asset until real values arrive. `TODO(electrical-team)`.
+- Outcomes (placeholder): attack stops at level 2 or above → 0 % of the city off; reaches level 1 → 30 %; reaches level 0 → 100 %. `TODO(electrical-team)`.
+
+Design intent: each route has one early control and one late control. Blocking early protects more assets, so the choice of control matters. The data must allow adding more assets, routes and controls later without code changes.
 
 **Do not invent technical values and present them as real.** If something is missing, add a `TODO(electrical-team)` comment.
 
@@ -164,14 +197,16 @@ Placeholder content: create `subestacion.json` from this draft and add `"_status
 All functions are pure and fully unit tested.
 
 - `assetRisk(asset) = probability × impact` (range 1–25).
-- `simulateRoute(route, selectedControls)` returns the index of the first blocked step (or "not blocked") and the list of assets reached.
+- `simulateRoute(route, selectedControls)` returns the lowest blocked `stepIndex` among the selected controls (or "not blocked") and the list of assets reached (`steps` before that index; all steps if not blocked).
 - `simulate(data, selectedControlIds)` runs every route and returns, per route: reached assets, blocking control, deepest Purdue level reached.
-- `totalRisk(data, selectedControlIds)` = sum of `assetRisk` of every asset reachable by at least one unblocked portion of a route (each asset counted once). Total risk "before" uses no controls.
+- `routeRisk(route, selectedControls, assets)` = sum of `assetRisk` of the assets the attacker reaches on that route (`assets` is needed to look up probability and impact).
+- `totalRisk(data, selectedControlIds)` = sum of `routeRisk` over all routes. An asset shared by two routes counts once per route that reaches it, because each route is a separate attack scenario. Total risk "before" uses no controls. (With the placeholder data: before = 36 + 27 = 63.)
 - `riskReduction` = before − after, also as a percentage.
-- `cityOffPercent` = the `outcomes` value for the deepest level reached by any route (Stage 1) or by the chosen route (Stage 2).
-- `recommend(data, budget)` evaluates every combination of `budget` controls (brute force; 6 choose 3 = 20) and returns the one with the lowest total risk. Ties: prefer the combination that blocks more routes, then alphabetical order of ids.
+- `cityOffPercent(data, selectedControlIds)` is computed **per route**: for each route, the `outcomes` value for the deepest level that route reaches (0 if it reaches no asset). Each route is a separate scenario ("if the attacker enters this way"), never the worst route overall, which would always give 0 % lit with budget 1. Stage 1 shows one skyline per route with `100 − cityOffPercent` lit; Stage 2 uses the chosen route only (via `duel`).
+- `recommend(data, budget)` evaluates every combination of `budget` controls (brute force; with the current data, 4 combinations) and returns the one with the lowest total risk. Ties: prefer the combination that blocks more routes, then the one that blocks earlier (lower `stepIndex`), then alphabetical order of ids.
+- Stage 2 (1 vs 1): `duel(data, controlId, routeId)` simulates only the chosen route with the chosen control and returns the assets reached, the deepest level and `cityOffPercent`.
 
-Tests must cover: no controls, all routes blocked, partial blocking, ties in `recommend`, and invalid data rejected by the schema.
+Tests must cover: no controls, a route blocked at stepIndex 0, a route blocked late, a control that does not touch the chosen route, ties in `recommend`, and invalid data rejected by the schema.
 
 ## 8. Builds and deployment
 

@@ -56,6 +56,7 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
     const names = (ids: readonly string[]) =>
       ids.map((id) => controlName.get(id) ?? id).join(' + ');
     const comparison = compareChoice(data, selected);
+    const cityOff = cityOffPercent(data, selected);
     return {
       results,
       rows: data.routes.map((route, i) => ({
@@ -63,9 +64,9 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
         result: results[i]!,
         before: routeRisk(route, [], data.assets),
         after: routeRisk(route, controls, data.assets),
+        cityOn: 100 - cityOff[i]!.cityOffPercent,
       })),
       risk: riskReduction(data, selected),
-      cityOn: 100 - cityOffPercent(data, selected),
       comparison,
       userNames: names(selected),
       recNames: names(comparison.recommendation.controlIds),
@@ -125,10 +126,10 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
       }
     >
       <div className="grid h-full grid-cols-2 gap-6 overflow-y-auto">
-        <div className="flex flex-col gap-4">
-          <section className="rounded-xl bg-navy-900 px-5 py-3">
+        <div className="flex flex-col gap-3">
+          <section className="rounded-xl bg-navy-900 px-5 py-2">
             <p className="text-text-muted">{t.totalRisk}</p>
-            <p className="text-5xl font-bold">
+            <p className="text-4xl font-bold">
               <span>{r.risk.before}</span>
               <span className="text-text-muted">{' → '}</span>
               <span className="text-attack">{r.risk.after}</span>
@@ -138,7 +139,7 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
             </p>
           </section>
 
-          <table className="w-full border-separate border-spacing-y-2 text-left">
+          <table className="w-full border-separate border-spacing-y-1 text-left">
             <thead className="text-text-muted">
               <tr>
                 <th className="px-3 font-normal">{t.route}</th>
@@ -164,10 +165,6 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
               ))}
             </tbody>
           </table>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <CityLights onPercent={r.cityOn} />
 
           <section
             className={`rounded-xl border-2 px-5 py-3 ${matches ? 'border-blocked' : 'border-cyan-accent'}`}
@@ -179,6 +176,18 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
               {verdictText(r.comparison, r.recNames)}
             </p>
           </section>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {r.rows.map(({ route, cityOn }) => (
+            <section key={route.id} className="rounded-xl bg-navy-900 px-4 py-2">
+              <p>
+                <span className="font-bold">{`${route.name}: `}</span>
+                <span className="text-text-muted">{t.cityScenario(route.entry)}</span>
+              </p>
+              <CityLights onPercent={cityOn} heightClass="h-16" />
+            </section>
+          ))}
         </div>
       </div>
     </ScreenLayout>
