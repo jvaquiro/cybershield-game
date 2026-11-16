@@ -1,9 +1,85 @@
 // All Spanish UI strings live here.
+const pct = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 });
+const formatPercent = (value: number) => `${pct.format(value)} %`;
+
 export const es = {
   appTitle: 'CyberShield',
-  appSubtitle: 'Defensa de subestaciones',
-  setupReady: 'Entorno listo',
   placeholderBadge: 'Datos de prueba',
+  formatPercent,
+
+  start: {
+    subtitle: 'Una ciudad encendida depende de una infraestructura protegida',
+    begin: 'Comenzar',
+  },
+
+  levels: {
+    4: 'Red empresarial',
+    3: 'Operaciones',
+    2: 'Supervisión',
+    1: 'Control',
+    0: 'Proceso',
+  } as Record<number, string>,
+  levelLabel: (level: number) => `Nivel ${level}`,
+
+  map: {
+    title: 'Mapa de la subestación',
+    hint: 'Toca un activo para ver su información',
+    next: 'Elegir defensa',
+    ariaLabel: 'Mapa de la subestación por niveles Purdue',
+  },
+
+  assetCard: {
+    level: 'Nivel',
+    protocol: 'Protocolo',
+    risk: 'Riesgo',
+    riskFormula: (probability: number, impact: number, risk: number) =>
+      `Probabilidad ${probability} × Impacto ${impact} = ${risk}`,
+    close: 'Cerrar',
+  },
+
+  defense: {
+    title: 'Elige tu defensa',
+    hint: (budget: number) => (budget === 1 ? 'Elige 1 control' : `Elige ${budget} controles`),
+    selected: (count: number, budget: number) => `Elegidos: ${count} de ${budget}`,
+    protects: 'Protege',
+    back: 'Volver al mapa',
+    simulate: 'Simular',
+  },
+
+  result: {
+    title: 'Resultado del ataque',
+    attackTitle: 'Así avanzó el ataque',
+    attackHint: 'Rojo: activos alcanzados · Verde: punto de bloqueo',
+    showRisk: 'Ver el riesgo',
+    showAttack: 'Ver el ataque',
+    route: 'Ruta',
+    before: 'Antes',
+    after: 'Después',
+    stoppedBy: (control: string) => `Detenido por ${control}`,
+    notStopped: 'Sin bloquear',
+    totalRisk: 'Riesgo total',
+    reduction: (value: number, percent: number) =>
+      `Reducción: ${value} (${formatPercent(percent)})`,
+    cityOn: (percent: number) => `Ciudad encendida: ${formatPercent(percent)}`,
+    cityAria: (percent: number) => `${formatPercent(percent)} de la ciudad sigue con luz`,
+    recommendation: 'Recomendación de CyberShield',
+    yourChoice: 'Tu defensa',
+    match: '¡Tu defensa coincide con la recomendación!',
+    equivalent: 'Tu defensa protege igual que la recomendación.',
+    whyLowerRisk: (rec: string, recRisk: number, userRisk: number) =>
+      `${rec} deja un riesgo de ${recRisk} en vez de ${userRisk}: el atacante alcanza menos activos.`,
+    whyMoreRoutes: (rec: string) => `${rec} deja el mismo riesgo, pero bloquea más rutas.`,
+    whyEarlier: (rec: string) =>
+      `${rec} deja el mismo riesgo, pero detiene el ataque antes, más cerca de la entrada.`,
+    retry: 'Probar otra defensa',
+    home: 'Volver al inicio',
+  },
+
+  dataError: {
+    title: 'Error en los datos de la subestación',
+    hint: 'Revisa el archivo src/data/subestacion.json',
+  },
+
   schemaErrors: {
     emptyText: 'El texto no puede estar vacío',
     emptySteps: 'La ruta debe tener al menos un paso',
