@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetRisk, cityOffPercent, riskReduction, totalRisk } from '../risk';
+import { assetRisk, cityOffPercent, riskReduction, routeRisk, totalRisk } from '../risk';
 import { combinations, recommend } from '../recommendation';
 import { duel, simulate, simulateRoute } from '../simulation';
 import { makeData, placeholder as data } from './fixtures';
@@ -32,11 +32,13 @@ describe('no controls', () => {
     });
   });
 
-  it('total risk counts each asset once and the whole city goes off', () => {
-    // 5 distinct assets × 9; ied and breakers are shared by both routes.
-    expect(totalRisk(data, [])).toBe(45);
+  it('total risk counts shared assets once per route and the whole city goes off', () => {
+    // remote 4 × 9 = 36, local 3 × 9 = 27; ied and breakers count in both routes.
+    expect(routeRisk(route('remote'), [], data.assets)).toBe(36);
+    expect(routeRisk(route('local'), [], data.assets)).toBe(27);
+    expect(totalRisk(data, [])).toBe(63);
     expect(cityOffPercent(data, [])).toBe(100);
-    expect(riskReduction(data, [])).toEqual({ before: 45, after: 45, reduction: 0, percent: 0 });
+    expect(riskReduction(data, [])).toEqual({ before: 63, after: 63, reduction: 0, percent: 0 });
   });
 });
 
@@ -91,22 +93,29 @@ describe('control that does not touch the chosen route', () => {
 
 describe('totalRisk, riskReduction and cityOffPercent with controls', () => {
   it('partial blocking keeps assets reached by the other route', () => {
-    // segmentation: remote reaches corporate; local still reaches hmi, ied, breakers.
+    // segmentation: remote reaches corporate (9); local still reaches hmi, ied, breakers (27).
+    expect(routeRisk(route('remote'), [control('segmentation')], data.assets)).toBe(9);
     expect(totalRisk(data, ['segmentation'])).toBe(36);
     expect(cityOffPercent(data, ['segmentation'])).toBe(100);
-    expect(riskReduction(data, ['segmentation'])).toEqual({
-      before: 45,
-      after: 36,
-      reduction: 9,
-      percent: 20,
-    });
+    const reduction = riskReduction(data, ['segmentation']);
+    expect(reduction).toMatchObject({ before: 63, after: 36, reduction: 27 });
+    expect(reduction.percent).toBeCloseTo((27 / 63) * 100);
+  });
+
+  it('total risk for each single control', () => {
+    expect(totalRisk(data, ['segmentation'])).toBe(36);
+    expect(totalRisk(data, ['usb-policy'])).toBe(36);
+    expect(totalRisk(data, ['firmware-check'])).toBe(45);
+    expect(totalRisk(data, ['dual-auth'])).toBe(54);
   });
 
   it('all routes blocked', () => {
     // remote reaches corporate only (level 4), local nothing.
     expect(totalRisk(data, ['segmentation', 'usb-policy'])).toBe(9);
     expect(cityOffPercent(data, ['segmentation', 'usb-policy'])).toBe(0);
-    expect(riskReduction(data, ['segmentation', 'usb-policy']).percent).toBe(80);
+    expect(riskReduction(data, ['segmentation', 'usb-policy']).percent).toBeCloseTo(
+      (54 / 63) * 100,
+    );
   });
 
   it('rejects unknown or repeated control ids', () => {
@@ -142,28 +151,35 @@ describe('recommend', () => {
   });
 
   it('tie on risk: prefers the combination that blocks more routes', () => {
-    // Route c is never blocked and reaches x, so both controls leave risk 9.
+    // Before: 3 routes × 18 = 54. a-one removes 18 from one route; z-two removes 9 from two routes.
     const tie = makeData(
-      { a: ['x'], b: ['x'], c: ['x'] },
+      { a: ['x', 'y'], b: ['x', 'y'], c: ['x', 'y'] },
       {
         'a-one': [{ routeId: 'a', stepIndex: 0 }],
         'z-two': [
-          { routeId: 'a', stepIndex: 0 },
-          { routeId: 'b', stepIndex: 0 },
+          { routeId: 'b', stepIndex: 1 },
+          { routeId: 'c', stepIndex: 1 },
         ],
       },
     );
-    expect(recommend(tie)).toMatchObject({ controlIds: ['z-two'], totalRisk: 9, routesBlocked: 2 });
+    expect(totalRisk(tie, ['a-one'])).toBe(36);
+    expect(recommend(tie)).toMatchObject({
+      controlIds: ['z-two'],
+      totalRisk: 36,
+      routesBlocked: 2,
+    });
   });
 
   it('tie on risk and routes: prefers the earlier block', () => {
+    // Both remove 18: a-late cuts y, z off route p at step 1; z-early cuts all of q at step 0.
     const tie = makeData(
-      { a: ['x', 'y'], c: ['x', 'y'] },
+      { p: ['x', 'y', 'z'], q: ['x', 'y'] },
       {
-        'a-late': [{ routeId: 'a', stepIndex: 1 }],
-        'z-early': [{ routeId: 'a', stepIndex: 0 }],
+        'a-late': [{ routeId: 'p', stepIndex: 1 }],
+        'z-early': [{ routeId: 'q', stepIndex: 0 }],
       },
     );
+    expect(totalRisk(tie, ['a-late'])).toBe(totalRisk(tie, ['z-early']));
     expect(recommend(tie).controlIds).toEqual(['z-early']);
   });
 

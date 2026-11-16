@@ -1,5 +1,11 @@
-import type { Asset, PurdueLevel, SubstationData } from '../data/schema';
-import { outcomeFor, simulate, type RouteResult } from './simulation';
+import type { Asset, Control, PurdueLevel, Route, SubstationData } from '../data/schema';
+import {
+  outcomeFor,
+  selectControls,
+  simulate,
+  simulateRoute,
+  type RouteResult,
+} from './simulation';
 
 export interface RiskReduction {
   before: number;
@@ -14,16 +20,30 @@ export function assetRisk(asset: Asset): number {
   return asset.probability * asset.impact;
 }
 
-function riskOfResults(data: SubstationData, results: readonly RouteResult[]): number {
-  const reached = new Set(results.flatMap((result) => result.reachedAssetIds));
-  return data.assets
-    .filter((asset) => reached.has(asset.id))
-    .reduce((sum, asset) => sum + assetRisk(asset), 0);
+/**
+ * Sum of assetRisk of the assets the attacker reaches on this route. `assets` is needed to look up
+ * probability and impact, since a route only stores asset ids.
+ */
+export function routeRisk(
+  route: Route,
+  selectedControls: readonly Control[],
+  assets: readonly Asset[],
+): number {
+  const byId = new Map(assets.map((asset) => [asset.id, asset]));
+  return simulateRoute(route, selectedControls).reachedAssetIds.reduce((sum, id) => {
+    const asset = byId.get(id);
+    if (!asset) throw new Error(`Unknown asset id: ${id}`);
+    return sum + assetRisk(asset);
+  }, 0);
 }
 
-/** Sum of assetRisk of every asset reached by at least one route, each asset counted once. */
+/**
+ * Sum of routeRisk over all routes. Each route is a separate attack scenario, so an asset shared
+ * by two routes counts once per route that reaches it.
+ */
 export function totalRisk(data: SubstationData, selectedControlIds: readonly string[]): number {
-  return riskOfResults(data, simulate(data, selectedControlIds));
+  const controls = selectControls(data, selectedControlIds);
+  return data.routes.reduce((sum, route) => sum + routeRisk(route, controls, data.assets), 0);
 }
 
 export function riskReduction(
