@@ -2,7 +2,6 @@
   "_status": "PLACEHOLDER - pending validation by electrical team",
   "_todo": [
     "TODO(electrical-team): real probability and impact values for every asset (all set to 3 for now)",
-    "TODO(electrical-team): real protocol for every asset",
     "TODO(electrical-team): real cityOffPercent values for every outcome level"
   ],
   "name": "Subestación tipo 115 kV",
@@ -11,7 +10,7 @@
       "id": "corporate",
       "name": "Red corporativa",
       "level": 4,
-      "protocol": "Por definir",
+      "protocol": "TI estándar (correo, ERP)",
       "probability": 3,
       "impact": 3,
       "description": "Correo y equipos de oficina de la empresa."
@@ -20,7 +19,7 @@
       "id": "scada",
       "name": "Servidor SCADA",
       "level": 3,
-      "protocol": "Por definir",
+      "protocol": "IEC 60870-5-104",
       "probability": 3,
       "impact": 3,
       "description": "Supervisa y controla la subestación a distancia."
@@ -29,7 +28,7 @@
       "id": "hmi",
       "name": "HMI local",
       "level": 2,
-      "protocol": "Por definir",
+      "protocol": "Windows; MMS hacia los IED",
       "probability": 3,
       "impact": 3,
       "description": "Pantalla de operación dentro de la subestación."
@@ -38,7 +37,7 @@
       "id": "ied",
       "name": "IED de 115 kV",
       "level": 1,
-      "protocol": "Por definir",
+      "protocol": "IEC 61850 (MMS y GOOSE)",
       "probability": 3,
       "impact": 3,
       "description": "Relé inteligente que protege y manda los equipos."
@@ -47,7 +46,7 @@
       "id": "breakers",
       "name": "Interruptores",
       "level": 0,
-      "protocol": "Por definir",
+      "protocol": "Señales cableadas de disparo",
       "probability": 3,
       "impact": 3,
       "description": "Abren o cierran el paso de energía a la ciudad."
@@ -72,33 +71,68 @@
       "id": "segmentation",
       "name": "Segmentación por zonas",
       "description": "Separa la red corporativa de la red de control.",
-      "blocks": [{ "routeId": "remote", "stepIndex": 1 }]
+      "blocks": [
+        {
+          "routeId": "remote",
+          "stepIndex": 1
+        }
+      ]
     },
     {
       "id": "dual-auth",
       "name": "Doble autorización de mandos",
       "description": "Dos personas deben aprobar cada mando a los interruptores.",
-      "blocks": [{ "routeId": "remote", "stepIndex": 3 }]
+      "blocks": [
+        {
+          "routeId": "remote",
+          "stepIndex": 3
+        }
+      ]
     },
     {
       "id": "usb-policy",
       "name": "Política de USB",
       "description": "Solo se conectan memorias USB revisadas y autorizadas.",
-      "blocks": [{ "routeId": "local", "stepIndex": 0 }]
+      "blocks": [
+        {
+          "routeId": "local",
+          "stepIndex": 0
+        }
+      ]
     },
     {
       "id": "firmware-check",
       "name": "Verificación de firmware",
       "description": "Revisa la firma del software antes de instalarlo en el IED.",
-      "blocks": [{ "routeId": "local", "stepIndex": 1 }]
+      "blocks": [
+        {
+          "routeId": "local",
+          "stepIndex": 1
+        }
+      ]
     }
   ],
   "outcomes": [
-    { "level": 4, "cityOffPercent": 0 },
-    { "level": 3, "cityOffPercent": 0 },
-    { "level": 2, "cityOffPercent": 0 },
-    { "level": 1, "cityOffPercent": 30 },
-    { "level": 0, "cityOffPercent": 100 }
+    {
+      "level": 4,
+      "cityOffPercent": 0
+    },
+    {
+      "level": 3,
+      "cityOffPercent": 0
+    },
+    {
+      "level": 2,
+      "cityOffPercent": 0
+    },
+    {
+      "level": 1,
+      "cityOffPercent": 30
+    },
+    {
+      "level": 0,
+      "cityOffPercent": 100
+    }
   ],
   "defenderBudget": 1
 }
