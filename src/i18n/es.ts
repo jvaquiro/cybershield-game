@@ -13,7 +13,12 @@ export const es = {
   start: {
     subtitle: 'Una ciudad encendida depende de una infraestructura protegida',
     begin: 'Comenzar',
+    city: 'Ciudad',
+    diagramAria: 'La subestación lleva energía a la ciudad',
   },
+
+  steps: ['Mapa', 'Defensa', 'Resultado'],
+  stepsAria: 'Pasos de la simulación',
 
   levels: {
     4: 'Red empresarial',
@@ -42,9 +47,17 @@ export const es = {
 
   defense: {
     title: 'Elige tu defensa',
-    hint: (budget: number) => (budget === 1 ? 'Elige 1 control' : `Elige ${budget} controles`),
-    selected: (count: number, budget: number) => `Elegidos: ${count} de ${budget}`,
-    protects: 'Protege',
+    hint: (budget: number) =>
+      budget === 1
+        ? 'Tienes presupuesto para 1 control'
+        : `Tienes presupuesto para ${budget} controles`,
+    selected: (count: number, budget: number) => `${count} de ${budget}`,
+    selectedAria: (count: number, budget: number) => `Elegidos ${count} de ${budget}`,
+    stopsAtEntry: 'Lo detiene en la entrada',
+    stopsBefore: (asset: string) => `Lo detiene antes de ${asset}`,
+    savedAssets: (saved: number, total: number) =>
+      saved === 1 ? `Salva 1 de ${total} activos` : `Salva ${saved} de ${total} activos`,
+    stripAria: (route: string) => `Recorrido del ataque por ${route}`,
     back: 'Volver al mapa',
     simulate: 'Simular',
   },
@@ -52,15 +65,15 @@ export const es = {
   result: {
     title: 'Resultado del ataque',
     attackTitle: 'Así avanzó el ataque',
-    attackHint: 'Rojo: activos alcanzados · Verde: punto de bloqueo',
+    legendReached: 'Activo alcanzado',
+    legendBlocked: 'Punto de bloqueo',
     showRisk: 'Ver el riesgo',
     showAttack: 'Ver el ataque',
-    route: 'Ruta',
-    before: 'Antes',
-    after: 'Después',
     stoppedBy: (control: string) => `Detenido por ${control}`,
     notStopped: 'Sin bloquear',
     totalRisk: 'Riesgo total',
+    routeRisk: 'Riesgo de la ruta',
+    riskMeterAria: (before: number, after: number) => `Riesgo baja de ${before} a ${after}`,
     reduction: (value: number, percent: number) =>
       `Reducción: ${value} (${formatPercent(percent)})`,
     cityOn: (percent: number) => `Ciudad encendida: ${formatPercent(percent)}`,

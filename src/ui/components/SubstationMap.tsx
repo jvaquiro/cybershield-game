@@ -14,6 +14,8 @@ interface SubstationMapProps {
 
 /** Seconds between two consecutive attack steps in the result animation. */
 const STEP_SECONDS = 0.5;
+/** Width of the Purdue level rail drawn left of the layout (viewBox units). */
+const RAIL = 236;
 
 type SegmentState = 'idle' | 'attack' | 'blocked' | 'dim';
 
@@ -113,7 +115,7 @@ export function SubstationMap({ data, results, onAssetTap }: SubstationMapProps)
 
   return (
     <svg
-      viewBox={`0 0 ${layout.width} ${layout.height}`}
+      viewBox={`0 0 ${layout.width + RAIL} ${layout.height}`}
       className="h-full w-full"
       role="img"
       aria-label={es.map.ariaLabel}
@@ -140,133 +142,175 @@ export function SubstationMap({ data, results, onAssetTap }: SubstationMapProps)
           <rect
             x={0}
             y={band.top}
-            width={layout.width}
+            width={layout.width + RAIL}
             height={g.bandHeight}
             fill={i % 2 === 0 ? colors.navy900 : colors.navy950}
+            fillOpacity={0.85}
           />
-          <text x={12} y={band.top + 24} fill={colors.textMuted} fontSize={g.labelFontSize}>
-            {`${es.levelLabel(band.level)} · ${es.levels[band.level]}`}
+          {/* Zone boundary between Purdue levels */}
+          {i > 0 && (
+            <line
+              x1={0}
+              x2={layout.width + RAIL}
+              y1={band.top}
+              y2={band.top}
+              stroke={colors.navy700}
+              strokeWidth={2}
+              strokeDasharray="2 6"
+            />
+          )}
+          <text
+            x={16}
+            y={band.top + g.bandHeight / 2 + 20}
+            fill={colors.cyan}
+            fillOpacity={0.9}
+            fontSize={64}
+            className="font-display"
+          >
+            {band.level}
+          </text>
+          <text
+            x={64}
+            y={band.top + g.bandHeight / 2 - 4}
+            fill={colors.textMuted}
+            fontSize={g.labelFontSize}
+          >
+            <tspan x={64}>{es.levelLabel(band.level)}</tspan>
+            <tspan x={64} dy={g.labelFontSize * 1.2} fill={colors.text}>
+              {es.levels[band.level]}
+            </tspan>
           </text>
         </g>
       ))}
+      <line
+        x1={RAIL - 8}
+        x2={RAIL - 8}
+        y1={0}
+        y2={layout.height}
+        stroke={colors.navy700}
+        strokeWidth={2}
+      />
 
-      {layout.routes.map((routeLayout) => {
-        const result = resultById.get(routeLayout.routeId);
-        return routeLayout.segments.map((segment) => (
-          <SegmentView
-            key={`${routeLayout.routeId}-${segment.index}`}
-            segment={segment}
-            state={segmentState(segment, result)}
-          />
-        ));
-      })}
-
-      {layout.routes.map((routeLayout) => {
-        const route = data.routes.find((item) => item.id === routeLayout.routeId)!;
-        const { entry } = routeLayout;
-        const stroke = results ? colors.attack : colors.cyan;
-        const top = entry.y - entry.height / 2;
-        return (
-          <g key={route.id}>
-            <rect
-              x={entry.x - entry.width / 2}
-              y={top}
-              width={entry.width}
-              height={entry.height}
-              rx={10}
-              fill={colors.navy950}
-              stroke={stroke}
-              strokeWidth={2}
-              strokeDasharray="8 4"
+      <g transform={`translate(${RAIL} 0)`}>
+        {layout.routes.map((routeLayout) => {
+          const result = resultById.get(routeLayout.routeId);
+          return routeLayout.segments.map((segment) => (
+            <SegmentView
+              key={`${routeLayout.routeId}-${segment.index}`}
+              segment={segment}
+              state={segmentState(segment, result)}
             />
-            <text textAnchor="middle" fontSize={g.labelFontSize}>
-              <tspan
-                x={entry.x}
-                y={top + 9 + ENTRY_LINE_HEIGHT * 0.8}
-                fill={stroke}
-                fontWeight={700}
-              >
-                {route.name}
-              </tspan>
-              {entry.lines.map((line, i) => (
+          ));
+        })}
+
+        {layout.routes.map((routeLayout) => {
+          const route = data.routes.find((item) => item.id === routeLayout.routeId)!;
+          const { entry } = routeLayout;
+          // Entry points are where the attacker comes in: always drawn in the attack color.
+          const stroke = colors.attack;
+          const top = entry.y - entry.height / 2;
+          return (
+            <g key={route.id}>
+              <rect
+                x={entry.x - entry.width / 2}
+                y={top}
+                width={entry.width}
+                height={entry.height}
+                rx={4}
+                fill={colors.navy950}
+                stroke={stroke}
+                strokeWidth={2}
+                strokeDasharray="8 4"
+              />
+              <text textAnchor="middle" fontSize={g.labelFontSize}>
                 <tspan
-                  key={i}
                   x={entry.x}
-                  y={top + 9 + ENTRY_LINE_HEIGHT * (i + 1.8)}
-                  fill={colors.text}
+                  y={top + 9 + ENTRY_LINE_HEIGHT * 0.8}
+                  fill={stroke}
+                  fontWeight={700}
                 >
-                  {line}
+                  {route.name}
                 </tspan>
-              ))}
-            </text>
-          </g>
-        );
-      })}
+                {entry.lines.map((line, i) => (
+                  <tspan
+                    key={i}
+                    x={entry.x}
+                    y={top + 9 + ENTRY_LINE_HEIGHT * (i + 1.8)}
+                    fill={colors.text}
+                  >
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            </g>
+          );
+        })}
 
-      {data.assets.map((asset) => {
-        const box = layout.assets[asset.id]!;
-        const reachedAt = arrival.get(asset.id);
-        const dimmed = results !== undefined && reachedAt === undefined;
-        const lines = wrapText(asset.name, 18);
-        const x = box.x - g.cardWidth / 2;
-        const y = box.y - g.cardHeight / 2;
-        const interactive = onAssetTap !== undefined;
-        return (
-          <g
-            key={asset.id}
-            opacity={dimmed ? 0.4 : 1}
-            role={interactive ? 'button' : undefined}
-            tabIndex={interactive ? 0 : undefined}
-            aria-label={interactive ? asset.name : undefined}
-            onClick={interactive ? () => onAssetTap(asset.id) : undefined}
-            onKeyDown={
-              interactive
-                ? (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') onAssetTap(asset.id);
-                  }
-                : undefined
-            }
-            style={interactive ? { cursor: 'pointer' } : undefined}
-          >
-            <rect
-              x={x}
-              y={y}
-              width={g.cardWidth}
-              height={g.cardHeight}
-              rx={12}
-              fill={colors.navy800}
-              stroke={dimmed ? colors.dim : colors.cyan}
-              strokeWidth={3}
-            />
-            {reachedAt !== undefined && (
+        {data.assets.map((asset) => {
+          const box = layout.assets[asset.id]!;
+          const reachedAt = arrival.get(asset.id);
+          const dimmed = results !== undefined && reachedAt === undefined;
+          const lines = wrapText(asset.name, 18);
+          const x = box.x - g.cardWidth / 2;
+          const y = box.y - g.cardHeight / 2;
+          const interactive = onAssetTap !== undefined;
+          return (
+            <g
+              key={asset.id}
+              opacity={dimmed ? 0.4 : 1}
+              role={interactive ? 'button' : undefined}
+              tabIndex={interactive ? 0 : undefined}
+              aria-label={interactive ? asset.name : undefined}
+              onClick={interactive ? () => onAssetTap(asset.id) : undefined}
+              onKeyDown={
+                interactive
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') onAssetTap(asset.id);
+                    }
+                  : undefined
+              }
+              style={interactive ? { cursor: 'pointer' } : undefined}
+            >
               <rect
                 x={x}
                 y={y}
                 width={g.cardWidth}
                 height={g.cardHeight}
-                rx={12}
-                fill={colors.attack}
-                fillOpacity={0.35}
-                stroke={colors.attack}
-                strokeWidth={4}
-                className="pop-in"
-                style={{ animationDelay: `${reachedAt}s` }}
+                rx={6}
+                fill={colors.navy800}
+                stroke={dimmed ? colors.dim : colors.cyan}
+                strokeWidth={2.5}
               />
-            )}
-            <text textAnchor="middle" fontSize={g.fontSize} fontWeight={700} fill={colors.text}>
-              {lines.map((line, i) => (
-                <tspan
-                  key={i}
-                  x={box.x}
-                  y={box.y + g.fontSize * 0.35 + (i - (lines.length - 1) / 2) * g.fontSize * 1.1}
-                >
-                  {line}
-                </tspan>
-              ))}
-            </text>
-          </g>
-        );
-      })}
+              {reachedAt !== undefined && (
+                <rect
+                  x={x}
+                  y={y}
+                  width={g.cardWidth}
+                  height={g.cardHeight}
+                  rx={6}
+                  fill={colors.attack}
+                  fillOpacity={0.35}
+                  stroke={colors.attack}
+                  strokeWidth={4}
+                  className="pop-in"
+                  style={{ animationDelay: `${reachedAt}s` }}
+                />
+              )}
+              <text textAnchor="middle" fontSize={g.fontSize} fontWeight={700} fill={colors.text}>
+                {lines.map((line, i) => (
+                  <tspan
+                    key={i}
+                    x={box.x}
+                    y={box.y + g.fontSize * 0.35 + (i - (lines.length - 1) / 2) * g.fontSize * 1.1}
+                  >
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            </g>
+          );
+        })}
+      </g>
     </svg>
   );
 }

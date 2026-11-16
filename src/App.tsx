@@ -16,7 +16,7 @@ function Game({ data }: { data: SubstationData }) {
 
   switch (screen) {
     case 'start':
-      return <StartScreen onStart={() => setScreen('map')} />;
+      return <StartScreen stationName={data.name} onStart={() => setScreen('map')} />;
     case 'map':
       return <MapScreen data={data} onNext={() => setScreen('defense')} />;
     case 'defense':

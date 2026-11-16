@@ -20,6 +20,7 @@ export function MapScreen({ data, onNext }: MapScreenProps) {
     <ScreenLayout
       title={es.map.title}
       hint={es.map.hint}
+      step={0}
       footer={<Button onClick={onNext}>{es.map.next}</Button>}
     >
       <SubstationMap data={data} onAssetTap={setOpenAssetId} />

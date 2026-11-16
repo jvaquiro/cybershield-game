@@ -2,18 +2,18 @@
 // Tailwind classes read the same values from @theme in src/index.css;
 // src/ui/__tests__/theme.test.ts fails if the two drift apart.
 export const colors = {
-  navy950: '#050b18',
-  navy900: '#0a1630',
-  navy800: '#12234a',
-  navy700: '#1e3a6e',
-  cyan: '#22d3ee',
-  attack: '#ef4444',
-  blocked: '#22c55e',
-  cityLight: '#fbbf24',
-  cityOff: '#1f2937',
-  dim: '#475569',
-  text: '#e2e8f0',
-  textMuted: '#94a3b8',
+  navy950: '#06101f',
+  navy900: '#0b1a33',
+  navy800: '#13284d',
+  navy700: '#1f3d70',
+  cyan: '#38d9f5',
+  attack: '#ff4b55',
+  blocked: '#2fe39a',
+  cityLight: '#ffc04a',
+  cityOff: '#1a2436',
+  dim: '#4a5b78',
+  text: '#e8eef8',
+  textMuted: '#93a5c2',
 } as const;
 
 /** CSS custom property name used by Tailwind for each color. */

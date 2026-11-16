@@ -34,16 +34,55 @@ function verdictText(comparison: Comparison, recName: string): string {
 
 function RouteStatus({ result, controlName }: { result: RouteResult; controlName: string }) {
   const t = es.result;
+  const blocked = result.blockingControlId !== null;
   return (
-    <span className={result.blockingControlId ? 'text-blocked' : 'text-attack'}>
-      {result.blockingControlId ? t.stoppedBy(controlName) : t.notStopped}
+    <span className={`inline-flex items-center gap-2 ${blocked ? 'text-blocked' : 'text-attack'}`}>
+      <span
+        aria-hidden="true"
+        className={`size-3 rounded-full ${blocked ? 'bg-blocked' : 'bg-attack'}`}
+      />
+      {blocked ? t.stoppedBy(controlName) : t.notStopped}
     </span>
+  );
+}
+
+function Legend() {
+  const t = es.result;
+  return (
+    <span className="flex flex-wrap items-center gap-x-5">
+      <span className="inline-flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="h-4 w-7 rounded-xs border-2 border-attack bg-attack/40"
+        />
+        {t.legendReached}
+      </span>
+      <span className="inline-flex items-center gap-2">
+        <span aria-hidden="true" className="size-5 rounded-full bg-blocked" />
+        {t.legendBlocked}
+      </span>
+    </span>
+  );
+}
+
+/** Horizontal meter: full width is the risk before; red is what remains, green what was removed. */
+function RiskMeter({ before, after }: { before: number; after: number }) {
+  const afterPct = before === 0 ? 0 : (after / before) * 100;
+  return (
+    <div
+      role="img"
+      aria-label={es.result.riskMeterAria(before, after)}
+      className="flex h-6 w-full overflow-hidden rounded-xs border border-navy-700"
+    >
+      <div className="h-full bg-attack" style={{ width: `${afterPct}%` }} />
+      <div className="h-full flex-1 bg-[repeating-linear-gradient(-45deg,var(--color-blocked)_0_6px,transparent_6px_12px)] opacity-70" />
+    </div>
   );
 }
 
 /**
  * Two views so the map keeps readable text: first the attack on a full-size map, then the
- * numbers (risk, city lights, recommendation).
+ * outcome (city per route, risk, recommendation).
  */
 export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenProps) {
   const t = es.result;
@@ -78,7 +117,8 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
     return (
       <ScreenLayout
         title={t.attackTitle}
-        hint={t.attackHint}
+        hint={<Legend />}
+        step={2}
         footer={
           <>
             <Button variant="secondary" onClick={onRetry}>
@@ -92,7 +132,7 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
           <div className="min-h-0 flex-1">
             <SubstationMap data={data} results={r.results} />
           </div>
-          <ul className="flex flex-wrap justify-center gap-x-8 gap-y-1">
+          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-1 text-xl">
             {r.rows.map(({ route, result }) => (
               <li key={route.id}>
                 <span className="font-bold">{`${route.name}: `}</span>
@@ -113,6 +153,7 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
   return (
     <ScreenLayout
       title={t.title}
+      step={2}
       footer={
         <>
           <Button variant="secondary" onClick={() => setView('attack')}>
@@ -125,69 +166,64 @@ export function ResultScreen({ data, selected, onRetry, onHome }: ResultScreenPr
         </>
       }
     >
-      <div className="grid h-full grid-cols-2 gap-6 overflow-y-auto">
-        <div className="flex flex-col gap-3">
-          <section className="rounded-xl bg-navy-900 px-5 py-2">
-            <p className="text-text-muted">{t.totalRisk}</p>
-            <p className="text-4xl font-bold">
+      <div className="flex h-full flex-col gap-4 overflow-y-auto">
+        {/* One city per route: each route is a separate attack scenario. */}
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: `repeat(${r.rows.length}, minmax(0, 1fr))` }}
+        >
+          {r.rows.map(({ route, result, before, after, cityOn }) => (
+            <section
+              key={route.id}
+              className="flex flex-col gap-1 rounded-md border border-navy-700 bg-navy-900/90 px-5 pt-3 pb-4"
+            >
+              <h2 className="text-3xl leading-tight">{route.name}</h2>
+              <p className="text-text-muted">{t.cityScenario(route.entry)}</p>
+              <CityLights onPercent={cityOn} heightClass="h-28" caption={false} />
+              <div className="flex flex-wrap items-end justify-between gap-x-4">
+                <p
+                  className={`font-display text-4xl ${cityOn > 0 ? 'text-city-light' : 'text-text-muted'}`}
+                >
+                  {t.cityOn(cityOn)}
+                </p>
+                <p className="text-text-muted">
+                  {`${t.routeRisk}: `}
+                  <span className="font-bold text-text">{before}</span>
+                  {' → '}
+                  <span className="font-bold text-attack">{after}</span>
+                </p>
+              </div>
+              <RouteStatus result={result} controlName={r.controlName(result.blockingControlId)} />
+            </section>
+          ))}
+        </div>
+
+        <div className="grid flex-1 grid-cols-2 gap-4">
+          <section className="flex flex-col justify-center gap-2 rounded-md border border-navy-700 bg-navy-900/90 px-5 py-3">
+            <h2 className="text-2xl text-text-muted">{t.totalRisk}</h2>
+            <p className="font-display text-6xl leading-none">
               <span>{r.risk.before}</span>
               <span className="text-text-muted">{' → '}</span>
               <span className="text-attack">{r.risk.after}</span>
             </p>
+            <RiskMeter before={r.risk.before} after={r.risk.after} />
             <p className="text-2xl font-bold text-blocked">
               {t.reduction(r.risk.reduction, r.risk.percent)}
             </p>
           </section>
 
-          <table className="w-full border-separate border-spacing-y-1 text-left">
-            <thead className="text-text-muted">
-              <tr>
-                <th className="px-3 font-normal">{t.route}</th>
-                <th className="px-3 text-right font-normal">{t.before}</th>
-                <th className="px-3 text-right font-normal">{t.after}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.rows.map(({ route, result, before, after }) => (
-                <tr key={route.id} className="bg-navy-900">
-                  <td className="rounded-l-lg px-3 py-2">
-                    <span className="block font-bold">{route.name}</span>
-                    <RouteStatus
-                      result={result}
-                      controlName={r.controlName(result.blockingControlId)}
-                    />
-                  </td>
-                  <td className="px-3 text-right text-2xl">{before}</td>
-                  <td className="rounded-r-lg px-3 text-right text-2xl font-bold text-attack">
-                    {after}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
           <section
-            className={`rounded-xl border-2 px-5 py-3 ${matches ? 'border-blocked' : 'border-cyan-accent'}`}
+            className={`flex flex-col justify-center gap-1 rounded-md border-2 px-5 py-3 ${
+              matches ? 'border-blocked bg-blocked/10' : 'border-cyan-accent bg-navy-900/90'
+            }`}
           >
-            <p className="text-text-muted">{t.recommendation}</p>
-            <p className="text-2xl font-bold text-cyan-accent">{r.recNames}</p>
+            <h2 className="text-2xl text-text-muted">{t.recommendation}</h2>
+            <p className="font-display text-4xl text-cyan-accent">{r.recNames}</p>
             {!matches && <p className="text-text-muted">{`${t.yourChoice}: ${r.userNames}`}</p>}
-            <p className={`mt-2 text-xl ${matches ? 'font-bold text-blocked' : ''}`}>
+            <p className={`mt-1 text-xl ${matches ? 'font-bold text-blocked' : ''}`}>
               {verdictText(r.comparison, r.recNames)}
             </p>
           </section>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {r.rows.map(({ route, cityOn }) => (
-            <section key={route.id} className="rounded-xl bg-navy-900 px-4 py-2">
-              <p>
-                <span className="font-bold">{`${route.name}: `}</span>
-                <span className="text-text-muted">{t.cityScenario(route.entry)}</span>
-              </p>
-              <CityLights onPercent={cityOn} heightClass="h-16" />
-            </section>
-          ))}
         </div>
       </div>
     </ScreenLayout>
