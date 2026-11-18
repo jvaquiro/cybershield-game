@@ -7,7 +7,7 @@ export function parseOrThrow(input: unknown): SubstationData {
   return result.data;
 }
 
-/** The placeholder substation from subestacion.json (probability = impact = 3, risk 9 each). */
+/** The substation from subestacion.json (validated risk values; outcomes still placeholders). */
 export const placeholder: SubstationData = parseOrThrow(rawData);
 
 type Blocks = { routeId: string; stepIndex: number }[];

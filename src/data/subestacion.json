@@ -1,9 +1,6 @@
 {
-  "_status": "PLACEHOLDER - pending validation by electrical team",
-  "_todo": [
-    "TODO(electrical-team): real probability and impact values for every asset (all set to 3 for now)",
-    "TODO(electrical-team): real cityOffPercent values for every outcome level"
-  ],
+  "_status": "PARTIAL - risk values validated, outcomes pending",
+  "_todo": ["TODO(electrical-team): real cityOffPercent values for every outcome level"],
   "name": "Subestación tipo 115 kV",
   "assets": [
     {
@@ -11,7 +8,7 @@
       "name": "Red corporativa",
       "level": 4,
       "protocol": "TI estándar (correo, ERP)",
-      "probability": 3,
+      "probability": 4,
       "impact": 3,
       "description": "Correo y equipos de oficina de la empresa."
     },
@@ -21,7 +18,7 @@
       "level": 3,
       "protocol": "IEC 60870-5-104",
       "probability": 3,
-      "impact": 3,
+      "impact": 4,
       "description": "Supervisa y controla la subestación a distancia."
     },
     {
@@ -29,8 +26,8 @@
       "name": "HMI local",
       "level": 2,
       "protocol": "Windows; MMS hacia los IED",
-      "probability": 3,
-      "impact": 3,
+      "probability": 4,
+      "impact": 4,
       "description": "Pantalla de operación dentro de la subestación."
     },
     {
@@ -39,7 +36,7 @@
       "level": 1,
       "protocol": "IEC 61850 (MMS y GOOSE)",
       "probability": 3,
-      "impact": 3,
+      "impact": 4,
       "description": "Relé inteligente que protege y manda los equipos."
     },
     {
@@ -48,7 +45,7 @@
       "level": 0,
       "protocol": "Señales cableadas de disparo",
       "probability": 3,
-      "impact": 3,
+      "impact": 4,
       "description": "Abren o cierran el paso de energía a la ciudad."
     }
   ],

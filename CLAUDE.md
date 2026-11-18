@@ -185,7 +185,7 @@ Controls (4):
 | `firmware-check` | Verificación de firmware | `local`, stepIndex 1 (before IED) |
 
 - `defenderBudget`: 1.
-- Probability and impact: 3 for every asset until real values arrive. `TODO(electrical-team)`.
+- Probability and impact (validated by the electrical team, scale 1–4): `corporate` P4 I3, `scada` P3 I4, `hmi` P4 I4, `ied` P3 I4, `breakers` P3 I4.
 - Outcomes (placeholder): attack stops at level 2 or above → 0 % of the city off; reaches level 1 → 30 %; reaches level 0 → 100 %. `TODO(electrical-team)`.
 
 Design intent: each route has one early control and one late control. Blocking early protects more assets, so the choice of control matters. The data must allow adding more assets, routes and controls later without code changes.
@@ -200,7 +200,7 @@ All functions are pure and fully unit tested.
 - `simulateRoute(route, selectedControls)` returns the lowest blocked `stepIndex` among the selected controls (or "not blocked") and the list of assets reached (`steps` before that index; all steps if not blocked).
 - `simulate(data, selectedControlIds)` runs every route and returns, per route: reached assets, blocking control, deepest Purdue level reached.
 - `routeRisk(route, selectedControls, assets)` = sum of `assetRisk` of the assets the attacker reaches on that route (`assets` is needed to look up probability and impact).
-- `totalRisk(data, selectedControlIds)` = sum of `routeRisk` over all routes. An asset shared by two routes counts once per route that reaches it, because each route is a separate attack scenario. Total risk "before" uses no controls. (With the placeholder data: before = 36 + 27 = 63.)
+- `totalRisk(data, selectedControlIds)` = sum of `routeRisk` over all routes. An asset shared by two routes counts once per route that reaches it, because each route is a separate attack scenario. Total risk "before" uses no controls. (With the current data: before = 48 + 40 = 88.)
 - `riskReduction` = before − after, also as a percentage.
 - `cityOffPercent(data, selectedControlIds)` is computed **per route**: for each route, the `outcomes` value for the deepest level that route reaches (0 if it reaches no asset). Each route is a separate scenario ("if the attacker enters this way"), never the worst route overall, which would always give 0 % lit with budget 1. Stage 1 shows one skyline per route with `100 − cityOffPercent` lit; Stage 2 uses the chosen route only (via `duel`).
 - `recommend(data, budget)` evaluates every combination of `budget` controls (brute force; with the current data, 4 combinations) and returns the one with the lowest total risk. Ties: prefer the combination that blocks more routes, then the one that blocks earlier (lower `stepIndex`), then alphabetical order of ids.

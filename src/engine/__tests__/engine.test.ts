@@ -11,7 +11,7 @@ const byRoute = (controlIds: string[]) =>
 
 describe('assetRisk', () => {
   it('is probability × impact', () => {
-    expect(assetRisk(data.assets[0]!)).toBe(9);
+    expect(assetRisk(data.assets[0]!)).toBe(12); // corporate: P4 × I3
     expect(assetRisk({ ...data.assets[0]!, probability: 5, impact: 4 })).toBe(20);
   });
 });
@@ -33,15 +33,15 @@ describe('no controls', () => {
   });
 
   it('total risk counts shared assets once per route and the whole city goes off', () => {
-    // remote 4 × 9 = 36, local 3 × 9 = 27; ied and breakers count in both routes.
-    expect(routeRisk(route('remote'), [], data.assets)).toBe(36);
-    expect(routeRisk(route('local'), [], data.assets)).toBe(27);
-    expect(totalRisk(data, [])).toBe(63);
+    // remote 12 + 12 + 12 + 12 = 48, local 16 + 12 + 12 = 40; ied and breakers count in both.
+    expect(routeRisk(route('remote'), [], data.assets)).toBe(48);
+    expect(routeRisk(route('local'), [], data.assets)).toBe(40);
+    expect(totalRisk(data, [])).toBe(88);
     expect(cityOffPercent(data, [])).toEqual([
       { routeId: 'remote', cityOffPercent: 100 },
       { routeId: 'local', cityOffPercent: 100 },
     ]);
-    expect(riskReduction(data, [])).toEqual({ before: 63, after: 63, reduction: 0, percent: 0 });
+    expect(riskReduction(data, [])).toEqual({ before: 88, after: 88, reduction: 0, percent: 0 });
   });
 });
 
@@ -113,35 +113,41 @@ describe('control that does not touch the chosen route', () => {
 
 describe('totalRisk, riskReduction and cityOffPercent with controls', () => {
   it('partial blocking keeps assets reached by the other route', () => {
-    // segmentation: remote reaches corporate (9); local still reaches hmi, ied, breakers (27).
-    expect(routeRisk(route('remote'), [control('segmentation')], data.assets)).toBe(9);
-    expect(totalRisk(data, ['segmentation'])).toBe(36);
+    // segmentation: remote reaches corporate (12); local still reaches hmi, ied, breakers (40).
+    expect(routeRisk(route('remote'), [control('segmentation')], data.assets)).toBe(12);
+    expect(totalRisk(data, ['segmentation'])).toBe(52);
     // Per route: remote stops at level 4 (0 % off), local reaches the breakers (100 %).
     expect(cityOffPercent(data, ['segmentation'])).toEqual([
       { routeId: 'remote', cityOffPercent: 0 },
       { routeId: 'local', cityOffPercent: 100 },
     ]);
     const reduction = riskReduction(data, ['segmentation']);
-    expect(reduction).toMatchObject({ before: 63, after: 36, reduction: 27 });
-    expect(reduction.percent).toBeCloseTo((27 / 63) * 100);
+    expect(reduction).toMatchObject({ before: 88, after: 52, reduction: 36 });
+    expect(reduction.percent).toBeCloseTo((36 / 88) * 100);
   });
 
-  it('total risk for each single control', () => {
-    expect(totalRisk(data, ['segmentation'])).toBe(36);
-    expect(totalRisk(data, ['usb-policy'])).toBe(36);
-    expect(totalRisk(data, ['firmware-check'])).toBe(45);
-    expect(totalRisk(data, ['dual-auth'])).toBe(54);
+  it('total risk and reduction for each single control', () => {
+    const expected: [string, number, number][] = [
+      ['usb-policy', 48, 45.5],
+      ['segmentation', 52, 40.9],
+      ['firmware-check', 64, 27.3],
+      ['dual-auth', 76, 13.6],
+    ];
+    for (const [id, after, percent] of expected) {
+      expect(totalRisk(data, [id])).toBe(after);
+      expect(riskReduction(data, [id]).percent).toBeCloseTo(percent, 1);
+    }
   });
 
   it('all routes blocked', () => {
     // remote reaches corporate only (level 4), local nothing.
-    expect(totalRisk(data, ['segmentation', 'usb-policy'])).toBe(9);
+    expect(totalRisk(data, ['segmentation', 'usb-policy'])).toBe(12);
     expect(cityOffPercent(data, ['segmentation', 'usb-policy'])).toEqual([
       { routeId: 'remote', cityOffPercent: 0 },
       { routeId: 'local', cityOffPercent: 0 },
     ]);
     expect(riskReduction(data, ['segmentation', 'usb-policy']).percent).toBeCloseTo(
-      (54 / 63) * 100,
+      (76 / 88) * 100,
     );
   });
 
@@ -163,11 +169,11 @@ describe('recommend', () => {
     expect(combinations(['a'], 0)).toEqual([[]]);
   });
 
-  it('placeholder data: usb-policy beats segmentation on the earlier-block tie-break', () => {
-    // Both leave risk 36 and block one route; usb-policy blocks at 0, segmentation at 1.
+  it('substation data: usb-policy leaves the lowest risk (no tie)', () => {
+    // usb-policy 48 < segmentation 52 < firmware-check 64 < dual-auth 76.
     expect(recommend(data)).toEqual({
       controlIds: ['usb-policy'],
-      totalRisk: 36,
+      totalRisk: 48,
       routesBlocked: 1,
       blockedAtSum: 0,
     });

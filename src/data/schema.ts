@@ -20,7 +20,7 @@ export const assetSchema = z.object({
   name: nonEmpty,
   level: purdueLevelSchema,
   protocol: nonEmpty,
-  // TODO(electrical-team): probability and impact are placeholders (3) until real values arrive.
+  // Risk matrix validated by the electrical team (scale 1–4 used; schema allows 1–5).
   probability: scoreSchema,
   impact: scoreSchema,
   description: nonEmpty,

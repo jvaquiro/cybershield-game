@@ -107,19 +107,27 @@ describe('compareChoice', () => {
     expect(compareChoice(data, ['usb-policy']).verdict).toBe('match');
   });
 
-  it('segmentation: same risk, recommendation blocks earlier', () => {
+  it('every other control: recommendation leaves lower risk', () => {
     expect(compareChoice(data, ['segmentation'])).toMatchObject({
-      verdict: 'earlier',
-      userRisk: 36,
+      verdict: 'lowerRisk',
+      userRisk: 52,
     });
-  });
-
-  it('dual-auth and firmware-check: recommendation leaves lower risk', () => {
     expect(compareChoice(data, ['dual-auth'])).toMatchObject({
       verdict: 'lowerRisk',
-      userRisk: 54,
+      userRisk: 76,
     });
     expect(compareChoice(data, ['firmware-check']).verdict).toBe('lowerRisk');
+  });
+
+  it('same risk and routes: recommendation blocks earlier', () => {
+    const tie = makeData(
+      { p: ['x', 'y', 'z'], q: ['x', 'y'] },
+      {
+        'a-late': [{ routeId: 'p', stepIndex: 1 }],
+        'z-early': [{ routeId: 'q', stepIndex: 0 }],
+      },
+    );
+    expect(compareChoice(tie, ['a-late'])).toMatchObject({ verdict: 'earlier', userRisk: 27 });
   });
 
   it('full tie with a different id is equivalent', () => {
